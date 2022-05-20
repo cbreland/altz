@@ -1,5 +1,8 @@
 # Jupyter Notebook
 
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/cbreland/altz.git/v0.0.01?labpath=%2Faltz%2Falt-z-score.ipynb)
+
 ![Github Actions Status](https://github.com/jupyter/notebook/workflows/Build/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/jupyter-notebook/badge/?version=latest)](https://jupyter-notebook.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jupyter/notebook/main?urlpath=tree)
@@ -7,6 +10,8 @@
 
 The Jupyter notebook is a web-based notebook environment for interactive
 computing.
+
+https://mybinder.org/v2/gh/cbreland/altz.git/v0.0.01?labpath=%2Faltz%2Falt-z-score.ipynb
 
 ![Jupyter notebook example](docs/resources/running_code_med.png 'Jupyter notebook example')
 

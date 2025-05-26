@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Altman Z-Score Analyzer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Altman Z-Score Analyzer</h1>
+        
+        <div class="input-area">
+            <input type="text" id="tickerInput" placeholder="Enter Stock Ticker (e.g., AAPL)">
+            <button id="getScoreButton">Get Score</button>
+            <div id="loadingSpinner" class="spinner" style="display: none;"></div>
+        </div>
+
+        <div id="errorMessages" class="error-messages"></div>
+
+        <h2>Current Z-Score Analysis</h2>
+        <div id="currentZScore" class="results-area">
+            <!-- Current Z-Score details will be populated here by JavaScript -->
+        </div>
+
+        <h2>Historical Z-Score Trend (Last 5 Years)</h2>
+        <div id="historicalChartContainer" class="chart-container">
+            <canvas id="historicalZScoreChart"></canvas>
+        </div>
+        <div id="historicalErrorMessages" class="error-messages"></div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+</body>
+</html>

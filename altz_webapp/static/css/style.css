@@ -1,0 +1,148 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f8;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* Align to top */
+    min-height: 100vh;
+    padding-top: 20px; /* Add some padding at the top */
+}
+
+.container {
+    width: 90%;
+    max-width: 800px;
+    background-color: #fff;
+    padding: 25px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px; /* Add margin at the bottom */
+}
+
+.spinner {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    margin-left: 10px; /* Spacing from the button */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+h1 {
+    color: #2c3e50;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+h2 {
+    color: #34495e;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 10px;
+    margin-top: 30px;
+    margin-bottom: 15px;
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    align-items: center;
+}
+
+#tickerInput {
+    flex-grow: 1;
+    padding: 10px 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+#getScoreButton {
+    padding: 10px 18px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+#getScoreButton:hover {
+    background-color: #2980b9;
+}
+
+.results-area, .chart-container {
+    background-color: #fdfefe;
+    padding: 15px;
+    border: 1px solid #ecf0f1;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    min-height: 50px; /* Ensure div is visible even when empty initially */
+}
+
+.chart-container {
+    padding: 20px; /* More padding for chart */
+}
+
+#currentZScore p {
+    margin: 8px 0;
+    line-height: 1.6;
+}
+
+#currentZScore strong {
+    color: #2c3e50;
+}
+
+.error-messages {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* Hide error divs by default */
+#errorMessages:empty, #historicalErrorMessages:empty {
+    display: none;
+}
+
+/* Specific styling for values */
+.z-score-value {
+    font-weight: bold;
+    font-size: 1.2em;
+}
+.risk-safe { color: #2ecc71; }
+.risk-grey { color: #f39c12; }
+.risk-distress { color: #e74c3c; }
+
+.financial-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.financial-data-table th, .financial-data-table td {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.financial-data-table th {
+    background-color: #f9f9f9;
+    color: #555;
+}
+
+.financial-data-table tr:last-child td {
+    border-bottom: none;
+}

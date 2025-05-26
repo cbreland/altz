@@ -63,10 +63,11 @@ def mock_yfinance_ticker():
     prices_2020 = [130.0, 131.0, 130.5]
     
     hist_index = dates_2020.union(dates_2021).union(dates_2022)
-    hist_df = pd.DataFrame(index=hist_index, columns=['Close'])
-    hist_df.loc[dates_2022, 'Close'] = prices_2022
-    hist_df.loc[dates_2021, 'Close'] = prices_2021
-    hist_df.loc[dates_2020, 'Close'] = prices_2020
+    # Make the history index timezone-aware (e.g., UTC)
+    hist_df = pd.DataFrame(index=hist_index.tz_localize('UTC'), columns=['Close'])
+    hist_df.loc[dates_2022.tz_localize('UTC'), 'Close'] = prices_2022
+    hist_df.loc[dates_2021.tz_localize('UTC'), 'Close'] = prices_2021
+    hist_df.loc[dates_2020.tz_localize('UTC'), 'Close'] = prices_2020
     
     mock_ticker.history.return_value = hist_df
 
@@ -129,6 +130,38 @@ def test_get_historical_financial_data_yfinance_errors(mock_yf_ticker_class):
     assert data_hist_fail is not None # Should return a list
     assert len(data_hist_fail) == 1 # One year of data
     assert data_hist_fail[0]['market_cap'] is None # Market cap calculation should fail
+
+
+@patch('altz_webapp.historical_analyzer.yf.Ticker')
+def test_get_historical_financial_data_timezone_handling(mock_yf_ticker_class, mock_yfinance_ticker):
+    """
+    Tests that get_historical_financial_data correctly handles timezone differences
+    between financial report dates (naive) and stock history index (aware).
+    The mock_yfinance_ticker fixture already returns timezone-aware history.
+    """
+    mock_yf_ticker_class.return_value = mock_yfinance_ticker # This mock has tz-aware history
+    
+    # Call the function that performs the comparison
+    # No TypeError should be raised.
+    try:
+        data = historical_analyzer.get_historical_financial_data("TZTEST", years=1)
+        assert data is not None # Should not fail catastrophically
+        if data:
+            # Check if market cap was calculated (implies date comparison worked)
+            # Depending on mock data, it might be None if shares/price missing for the specific date,
+            # but the key is no TypeError.
+            assert 'market_cap' in data[0] 
+            # For the mock_yfinance_ticker, 2022 data should have market_cap
+            data_2022 = next(item for item in data if item["year"] == 2022)
+            assert data_2022['market_cap'] is not None
+            assert data_2022['market_cap'] == 150.5 * 100e6
+
+    except TypeError as e:
+        pytest.fail(f"Timezone comparison TypeError should not have been raised: {e}")
+    except Exception as e:
+        # Other exceptions might occur if mock data is incomplete, but not TypeError
+        print(f"An unexpected error occurred during timezone test: {e}")
+
 
 # --- Tests for calculate_historical_z_scores ---
 

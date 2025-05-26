@@ -16,11 +16,13 @@ class AltmanZScoreCalculator:
 
     MARKETS = ['NYSE', 'NAS'] # Potentially add other markets if needed
 
-    def __init__(self, ticker):
+    def __init__(self, ticker, perform_init_fetch=True):
         self.ticker = ticker.upper()
         self.soup = None
-        self.fs = {} # Financial statement data
-        self._fetch_and_parse_data()
+        self.fs = {key: 0.0 for key in self.FIELDS.keys()} # Initialize with defaults
+        
+        if perform_init_fetch:
+            self._fetch_and_parse_data()
 
     def _fetch_and_parse_data(self):
         response = self._return_response()
@@ -64,20 +66,43 @@ class AltmanZScoreCalculator:
         # The parsing logic from the notebook: find <p> tag at index 19.
         # This is fragile and might break if gurufocus.com changes its HTML structure.
         # A more robust parser would use specific IDs, classes, or more resilient search patterns.
+        data_text_block = None
         try:
-            data_paragraph = self.soup.find_all("p")
-            if len(data_paragraph) > 19:
-                data_text = data_paragraph[19].text
-            else: # Fallback or error if the expected paragraph isn't there
-                print(f"Warning: Could not find the data paragraph for {self.ticker}. Data might be incomplete.")
-                return {key: 0 for key in self.FIELDS.keys()}
-
-            for row in data_text.split("\\n"):
-                for key, value_prefix in self.FIELDS.items():
-                    if value_prefix in row:
-                        z_data_dict[key] = self._clear_characters(row, value_prefix)
+            paragraphs = self.soup.find_all("p")
+            for p_tag in paragraphs:
+                # Look for a paragraph that seems to contain the TTM data list.
+                # This is still heuristic and might need adjustment.
+                if "Trailing Twelve Months (TTM)" in p_tag.text and "Total Assets was" in p_tag.text:
+                    data_text_block = p_tag.text
+                    break
             
-            # Ensure all fields are present, if not, fill with 0 or handle error
+            if not data_text_block:
+                # Fallback to the old method if the new one fails, or if the structure is the old one.
+                # This could be an indication of an older page format or an unexpected new one.
+                print(f"Warning: Could not find specific TTM data block for {self.ticker}. Trying legacy p[19] parsing.")
+                if len(paragraphs) > 19:
+                    data_text_block = paragraphs[19].text # Legacy fragile selector
+                else:
+                    print(f"Warning: Could not find any suitable data paragraph for {self.ticker}. Data will be incomplete.")
+                    return {key: 0.0 for key in self.FIELDS.keys()}
+
+            # Process the found data_text_block
+            # The lines might start with "[XXX]" link IDs, which should be stripped.
+            # Also, some lines might contain sums like "Pre-Tax Income was ... = $Value Mil."
+            
+            lines = data_text_block.split('\n')
+            for line in lines:
+                cleaned_line = line.strip()
+                # Attempt to strip leading "[XXX]" if present
+                if cleaned_line.startswith('[') and ']' in cleaned_line:
+                    cleaned_line = cleaned_line.split(']', 1)[-1].strip()
+
+                for key, value_prefix in self.FIELDS.items():
+                    if cleaned_line.startswith(value_prefix): # Use startswith for potentially cleaner match
+                        z_data_dict[key] = self._clear_characters(cleaned_line, value_prefix)
+                        break # Move to next line once a key is matched
+            
+            # Ensure all fields are present, if not, fill with 0.0 or handle error
             for field in self.FIELDS.keys():
                 if field not in z_data_dict:
                     # print(f"Warning: Field '{field}' not found for {self.ticker}. Defaulting to 0.")
@@ -92,17 +117,33 @@ class AltmanZScoreCalculator:
     def _clear_characters(self, row_text, name_prefix):
         """
         Helper function to clean and convert financial figure strings to float.
+        Handles cases like "FieldName was $Value Mil." and "FieldName was ... = $Value Mil."
         """
         # print(f"Raw text for {name_prefix}: {row_text}") # Debugging
-        row_val_str = row_text.split(name_prefix)[-1].split("=")[-1]
+        
+        # Isolate the part after the prefix
+        value_part = row_text.split(name_prefix, 1)[-1].strip()
+        
+        # If there's an '=', take the part after the last '='
+        if '=' in value_part:
+            value_part = value_part.split('=')[-1].strip()
+            
+        # Now, value_part should be something like "$XXX,XXX.XX Mil." or "$XXX.XX Mil" or just a number
+        
         remove_chars = ["$", ",", "Mil.", " "]
         for char_to_remove in remove_chars:
-            row_val_str = row_val_str.replace(char_to_remove, "")
+            value_part = value_part.replace(char_to_remove, "")
+        
         try:
-            # Assuming "Mil." means millions
-            return float(row_val_str) * 1000 * 1000
+            # Assuming "Mil." means millions for all relevant fields
+            # If some fields are not in millions, this logic would need adjustment
+            # or the "Mil." check should be more specific.
+            num_value = float(value_part)
+            if "Mil." in row_text.split(name_prefix, 1)[-1]: # Check if "Mil." was in the original value string part
+                return num_value * 1000 * 1000
+            return num_value # If "Mil." was not present, return the number as is (e.g. for Market Cap if it's full value)
         except ValueError:
-            # print(f"Warning: Could not convert '{row_val_str}' to float for {name_prefix}. Defaulting to 0.")
+            print(f"Warning: Could not convert '{value_part}' to float for {name_prefix}. Raw line: '{row_text}'. Defaulting to 0.0.")
             return 0.0
 
 

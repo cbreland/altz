@@ -146,21 +146,45 @@ def get_historical_financial_data(ticker_symbol, years=5):
             # --- Market Cap Calculation ---
             # Use closing price at the financial statement date (target_col_balance)
             # Find the closest available trading day's closing price in hist_prices_daily
-            # pd.Timestamp can convert the financial statement column date for comparison
-            financial_report_date = pd.Timestamp(target_col_balance.date())
-
-            # Try to find price on the exact date, else find nearest previous
-            if financial_report_date in hist_prices_daily.index:
-                closing_price = hist_prices_daily.loc[financial_report_date, 'Close']
+            
+            closing_price = None
+            # Ensure target_col_balance is a valid timestamp before proceeding
+            if pd.isna(target_col_balance):
+                print(f"Warning: Invalid financial report date (target_col_balance) for {ticker_symbol} in {year}. Cannot calculate market cap.")
+            elif hist_prices_daily.index.empty:
+                print(f"Warning: No historical price data available for {ticker_symbol}. Cannot calculate market cap for {year}.")
             else:
-                # Get the index of the closest prior date
-                # Ensure hist_prices_daily.index is sorted
-                prior_dates = hist_prices_daily.index[hist_prices_daily.index <= financial_report_date]
-                if not prior_dates.empty:
-                    closest_date = prior_dates[-1] # Last date in the series that is <= financial_report_date
-                    closing_price = hist_prices_daily.loc[closest_date, 'Close']
-                else: # No prior date found (e.g. financial report date is before stock trading history)
-                    closing_price = None
+                # financial_report_date is derived from balance sheet column, typically just a date (naive)
+                financial_report_date_naive = pd.Timestamp(target_col_balance.date())
+
+                # Timezone synchronization
+                price_index_tz = getattr(hist_prices_daily.index, 'tz', None)
+                
+                financial_report_date_for_comparison = financial_report_date_naive
+                if price_index_tz is not None: # If price index is timezone-aware
+                    # Localize the naive financial_report_date to the price index's timezone
+                    try:
+                        financial_report_date_for_comparison = financial_report_date_naive.tz_localize(price_index_tz)
+                    except Exception as tze: # Handle cases like ambiguous time during DST change if date had time part
+                         print(f"Warning: Could not localize financial_report_date {financial_report_date_naive} to {price_index_tz} for {ticker_symbol}, year {year}: {tze}. Using naive comparison or UTC.")
+                         # Fallback or make both UTC for comparison
+                         financial_report_date_for_comparison = financial_report_date_naive.tz_localize('UTC')
+                         hist_prices_daily_index_for_comparison = hist_prices_daily.index.tz_convert('UTC')
+                else: # Price index is naive
+                    hist_prices_daily_index_for_comparison = hist_prices_daily.index # Use as is
+
+
+                # Try to find price on the exact date (after potential timezone alignment)
+                if financial_report_date_for_comparison in hist_prices_daily_index_for_comparison:
+                    closing_price = hist_prices_daily.loc[financial_report_date_for_comparison, 'Close']
+                else:
+                    # Get the index of the closest prior date
+                    # Ensure hist_prices_daily.index (or its tz-converted version) is sorted (usually is)
+                    prior_dates = hist_prices_daily_index_for_comparison[hist_prices_daily_index_for_comparison <= financial_report_date_for_comparison]
+                    if not prior_dates.empty:
+                        closest_date = prior_dates[-1] 
+                        closing_price = hist_prices_daily.loc[closest_date, 'Close']
+                    # else: closing_price remains None if no prior date found
             
             if closing_price is not None and shares_outstanding_hist is not None:
                 data_for_year['market_cap'] = closing_price * shares_outstanding_hist
